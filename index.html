@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mestre dos Juros — Jogo de Juros Simples</title>
+<style>
+*{box-sizing:border-box} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#dff6ff,#f5efff);color:#17233c}
+.wrap{max-width:900px;margin:auto;padding:18px}
+.card{background:#fff;border-radius:24px;padding:24px;box-shadow:0 8px 25px #0001;margin:14px 0}
+h1{font-size:38px;margin:5px 0;color:#ff9f00}.sub{color:#49617c}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{background:#f1f7ff;border-radius:16px;padding:12px;text-align:center;font-weight:bold}.stat b{display:block;font-size:22px;margin-top:4px}
+.progress{height:12px;background:#e7edf5;border-radius:20px;overflow:hidden}.bar{height:100%;background:#25a7e8;width:0%;transition:.3s}
+.badge{display:inline-block;padding:7px 12px;border-radius:20px;background:#eef2ff;font-weight:bold}
+.question{font-size:23px;font-weight:bold;line-height:1.35;margin:18px 0}
+.options{display:grid;gap:10px}.option{border:2px solid #d8e3f0;background:#fff;border-radius:14px;padding:14px;text-align:left;font-size:17px;cursor:pointer}.option:hover{background:#f2f9ff;border-color:#25a7e8}
+.option:disabled{cursor:default}.correct{background:#dcfce7!important;border-color:#22c55e!important}.wrong{background:#fee2e2!important;border-color:#ef4444!important}
+button.primary{background:#ffae00;color:#17233c;border:0;border-radius:14px;padding:14px 22px;font-size:18px;font-weight:bold;cursor:pointer}
+button.secondary{background:#edf4ff;border:0;border-radius:14px;padding:12px 18px;font-weight:bold;cursor:pointer}
+.hidden{display:none}.feedback{margin-top:15px;padding:14px;border-radius:14px;background:#f7f9fc;line-height:1.5}.formula{background:#fff7df;padding:12px;border-radius:14px;margin-top:12px;font-weight:bold;text-align:center}
+.city{display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap;margin-top:18px}.building{padding:16px;border-radius:16px;background:#eef7ff;text-align:center;min-width:120px}
+.timer{font-size:24px;font-weight:bold}.danger{color:#e11d48}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card" id="start">
+  <div class="badge">🎮 Jogo educativo</div>
+  <h1>Mestre dos Juros</h1>
+  <p class="sub">Aprenda juros simples administrando seu dinheiro e tentando chegar ao topo!</p>
+  <div class="city"><div class="building">🏦<br>Banco</div><div class="building">🛒<br>Loja</div><div class="building">🏢<br>Empresa</div><div class="building">📈<br>Investimentos</div></div>
+  <h3>Você começa com R$ 1.000.</h3>
+  <p>Em cada rodada, escolha uma resposta. Se errar, veja o passo a passo e tente aprender com o erro.</p>
+  <button class="primary" onclick="startGame()">▶ Começar jogo</button>
+</div>
+
+<div class="card hidden" id="game">
+  <div class="stats">
+    <div class="stat">💰 Dinheiro<b id="money">R$ 1.000</b></div>
+    <div class="stat">⭐ Pontos<b id="score">0</b></div>
+    <div class="stat">🏆 Fase<b id="level">Iniciante</b></div>
+  </div>
+  <br>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <p><span id="round">Rodada 1</span> · <span class="timer" id="timer">2:00</span></p>
+  <div class="question" id="question"></div>
+  <div class="formula">J = C × i × t &nbsp;&nbsp; | &nbsp;&nbsp; M = C + J</div>
+  <div class="options" id="options"></div>
+  <div id="feedback" class="feedback hidden"></div>
+  <br>
+  <button class="primary hidden" id="next" onclick="nextQuestion()">Próxima rodada →</button>
+</div>
+
+<div class="card hidden" id="end">
+  <h1>🏆 Fim do jogo!</h1>
+  <p id="result"></p>
+  <button class="primary" onclick="location.reload()">🔄 Jogar novamente</button>
+</div>
+</div>
+
+<script>
+const questions=[
+{q:"💰 Investimento: Você aplicou R$ 1.000 a 5% ao mês durante 4 meses. Quanto terá de juros?",a:["R$ 150","R$ 200","R$ 250","R$ 300"],c:1,e:"J = 1.000 × 0,05 × 4 = R$ 200. Portanto, os juros são R$ 200."},
+{q:"🏦 Empréstimo: Você pegou R$ 800 emprestados a 3% ao mês durante 5 meses. Quanto pagará de juros?",a:["R$ 90","R$ 100","R$ 120","R$ 150"],c:2,e:"J = 800 × 0,03 × 5 = R$ 120."},
+{q:"🛒 Compra: Um produto custa R$ 1.200 e terá juros simples de 2% ao mês por 3 meses. Qual será o montante?",a:["R$ 1.236","R$ 1.260","R$ 1.272","R$ 1.320"],c:2,e:"J = 1.200 × 0,02 × 3 = R$ 72. M = 1.200 + 72 = R$ 1.272."},
+{q:"⚡ Desafio-relâmpago: Qual é o juro de R$ 600 a 4% ao mês durante 3 meses?",a:["R$ 48","R$ 60","R$ 72","R$ 84"],c:2,e:"J = 600 × 0,04 × 3 = R$ 72."},
+{q:"💰 Você investiu R$ 1.500 a 2% ao mês por 6 meses. Qual será o montante?",a:["R$ 1.620","R$ 1.650","R$ 1.680","R$ 1.700"],c:2,e:"J = 1.500 × 0,02 × 6 = R$ 180. M = 1.500 + 180 = R$ 1.680."},
+{q:"🏦 Um empréstimo de R$ 2.000 tem taxa de 2,5% ao mês por 4 meses. Quanto de juros será pago?",a:["R$ 150","R$ 180","R$ 200","R$ 250"],c:2,e:"J = 2.000 × 0,025 × 4 = R$ 200."},
+{q:"🛒 Uma compra de R$ 900 terá juros simples de 5% ao mês por 2 meses. Qual será o total?",a:["R$ 945","R$ 960","R$ 990","R$ 1.000"],c:2,e:"J = 900 × 0,05 × 2 = R$ 90. M = 900 + 90 = R$ 990."},
+{q:"⚡ Você aplicou R$ 2.500 a 1,5% ao mês durante 8 meses. Quanto ganhou de juros?",a:["R$ 250","R$ 275","R$ 300","R$ 325"],c:2,e:"J = 2.500 × 0,015 × 8 = R$ 300."},
+{q:"🏢 Uma empresa pegou R$ 3.000 a 4% ao mês por 3 meses. Qual o montante da dívida?",a:["R$ 3.240","R$ 3.300","R$ 3.360","R$ 3.400"],c:2,e:"J = 3.000 × 0,04 × 3 = R$ 360. M = 3.000 + 360 = R$ 3.360."},
+{q:"👑 Mestre dos Juros: R$ 4.000 aplicados a 2% ao mês por 10 meses rendem quanto de juros?",a:["R$ 600","R$ 700","R$ 800","R$ 900"],c:2,e:"J = 4.000 × 0,02 × 10 = R$ 800."}
+];
+const TEMPO_POR_RESPOSTA=120; // 2 minutos, em segundos
+let idx=0,score=0,money=1000,timer,seconds=TEMPO_POR_RESPOSTA,answered=false;
+
+function startGame(){document.getElementById('start').classList.add('hidden');document.getElementById('game').classList.remove('hidden');showQuestion();}
+function level(){return idx<2?"Iniciante":idx<4?"Aprendiz":idx<6?"Investidor":idx<8?"Empreendedor":"Mestre dos Juros"}
+function showQuestion(){
+ answered=false;seconds=TEMPO_POR_RESPOSTA;
+ document.getElementById('round').textContent=`Rodada ${idx+1} de ${questions.length}`;
+ document.getElementById('level').textContent=level();
+ document.getElementById('score').textContent=score;
+ document.getElementById('money').textContent=money.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+ document.getElementById('bar').style.width=(idx/questions.length*100)+"%";
+ document.getElementById('question').textContent=questions[idx].q;
+ document.getElementById('feedback').classList.add('hidden');document.getElementById('next').classList.add('hidden');
+ const box=document.getElementById('options');box.innerHTML='';
+ questions[idx].a.forEach((x,i)=>{let b=document.createElement('button');b.className='option';b.textContent=(String.fromCharCode(65+i))+") "+x;b.onclick=()=>answer(i,b);box.appendChild(b)});
+ updateTimer();
+ clearInterval(timer);timer=setInterval(()=>{seconds--;updateTimer();if(seconds<=0){clearInterval(timer);if(!answered)answer(-1,null)}},1000);
+}
+function updateTimer(){
+ let t=document.getElementById('timer');
+ let m=Math.floor(seconds/60), s=String(seconds%60).padStart(2,'0');
+ t.textContent=m+":"+s;
+ t.classList.toggle('danger',seconds<=15);
+}
+function answer(choice,btn){
+ if(answered)return;answered=true;clearInterval(timer);
+ let q=questions[idx], buttons=[...document.querySelectorAll('.option')];buttons.forEach(x=>x.disabled=true);
+ if(choice===q.c){score+=100;money+=100+Math.round(seconds/2);if(btn)btn.classList.add('correct');document.getElementById('feedback').innerHTML="✅ <b>Acertou!</b> Você ganhou pontos e dinheiro.<br>"+q.e}
+ else {if(btn)btn.classList.add('wrong');buttons[q.c].classList.add('correct');money=Math.max(0,money-50);document.getElementById('feedback').innerHTML="❌ <b>Quase!</b> A resposta correta está marcada. "+q.e+"<br>Você perdeu R$ 50."}
+ document.getElementById('feedback').classList.remove('hidden');document.getElementById('next').classList.remove('hidden');
+ document.getElementById('score').textContent=score;document.getElementById('money').textContent=money.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function nextQuestion(){idx++;if(idx>=questions.length){finish()}else showQuestion()}
+function finish(){
+ clearInterval(timer);document.getElementById('game').classList.add('hidden');document.getElementById('end').classList.remove('hidden');
+ let title=score>=850?"👑 Você é o Mestre dos Juros!":score>=600?"🌟 Excelente! Você está dominando os juros.":"📚 Continue praticando! Você está aprendendo.";
+ document.getElementById('result').innerHTML=`<h2>${title}</h2><p>Você terminou com <b>${score} pontos</b> e <b>${money.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</b>.</p><p>O mais importante: você aprendeu a usar <b>J = C × i × t</b> e <b>M = C + J</b>.</p>`;
+}
+</script>
+</body>
+</html>
